@@ -1,0 +1,9 @@
+pandas
+datetime
+ipykernel
+xgboost
+shap
+matplotlib
+jupyter
+ipywidgets
+taipy
