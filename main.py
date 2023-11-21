@@ -1,10 +1,13 @@
 import datetime as dt
+import numpy as np
 import pandas as pd
 from taipy.gui import Gui
 import xgboost as xgb
 from shap import Explainer, Explanation
+from sklearn.metrics import confusion_matrix
 
-N = 300000
+N = 10000
+threshold = 0.5
 column_names = [
     "amt",
     "zip",
@@ -62,7 +65,7 @@ y_train_values = y_train.values
 X_train = train.drop("is_fraud", axis="columns")
 X_train_values = X_train.values
 
-model = xgb.XGBClassifier()
+model = xgb.XGBRegressor()
 model.fit(X_train_values, y_train_values)
 
 explainer = Explainer(model)
@@ -72,9 +75,10 @@ explaination = Explanation(sv, sv.base_values, X_train, feature_names=X_train.co
 transactions = df[:N]
 # Remove first column
 transactions = transactions.drop("Unnamed: 0", axis="columns")
-results = model.predict(X_train_values[:N])
-# Convert 0 to False and 1 to True
-results = [bool(result) for result in results]
+raw_results = model.predict(X_train_values[:N])
+results = [str(round(result, 2)) for result in raw_results]
+transactions.insert(0, "fraud_value", results)
+results = [float(result) > threshold for result in raw_results]
 # Put a column in first position with the results
 transactions.insert(0, "fraud", results)
 
@@ -319,6 +323,27 @@ page2 = """
 <|{month_data}|chart|type=bar|x=Month|y[1]=Not Fraud|y[2]=Fraud|layout={month_layout}|>
 """
 
+confusion_text = "Confusion Matrix"
+
+
+def update_threshold(state):
+    state.results = [float(result) > state.threshold for result in raw_results]
+    state.transactions["fraud"] = results
+    state.transactions = state.transactions
+
+    y_pred = state.results
+    y_true = y_train_values[:N]
+    cm = confusion_matrix(y_true, y_pred)
+    cm = cm.astype("float") / cm.sum(axis=1)[:, np.newaxis]
+    state.confusion_text = cm
+    print(cm)
+
+
+page3 = """
+<|{threshold}|slider|min=0.0|max=1.0|on_change=update_threshold|>
+<|{confusion_text}|text|>
+"""
+
 root = """
 <|navbar|>
 """
@@ -327,6 +352,7 @@ pages = {
     "/": root,
     "page1": page1,
     "page2": page2,
+    "page3": page3,
 }
 
 Gui(pages=pages).run()
