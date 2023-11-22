@@ -145,7 +145,6 @@ def update_threshold(state: State) -> None:
     cm = confusion_matrix(y_true, y_pred)
     cm = cm.astype("float") / cm.sum(axis=1)[:, np.newaxis]
     tp, tn, fp, fn = cm[1][1], cm[0][0], cm[0][1], cm[1][0]
-    print(f"tp: {tp}, tn: {tn}, fp: {fp}, fn: {fn}")
 
     data = {
         "Values": [
