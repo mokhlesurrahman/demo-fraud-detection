@@ -133,20 +133,14 @@ def update_threshold(state: State) -> None:
     Args:
         - state: the state of the app
     """
-    print(0)
     threshold = float(state.threshold)
-    print(1)
-    results = [float(result) > threshold for result in state.transactions["is_fraud"]]
-    print(2)
+    results = [
+        float(result) > threshold for result in state.transactions["fraud_value"]
+    ]
     state.transactions["fraud"] = results
-    print(3)
     state.transactions = state.transactions
-    print(1)
     y_pred = results
-    print(y_pred[:10])
     y_true = state.transactions["is_fraud"]
-    print(y_true[:10])
     cm = confusion_matrix(y_true, y_pred)
     cm = cm.astype("float") / cm.sum(axis=1)[:, np.newaxis]
-    state.confusion_text = cm
-    print(cm)
+    state.confusion_text = str(cm)
