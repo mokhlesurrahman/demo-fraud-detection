@@ -1,8 +1,5 @@
-pandas
-ipykernel
-xgboost
-shap
-matplotlib
-jupyter
-ipywidgets
-taipy
+pandas==2.0.3
+xgboost==2.0.2
+shap==0.43.0
+matplotlib==3.7.3
+taipy==3.0.0
