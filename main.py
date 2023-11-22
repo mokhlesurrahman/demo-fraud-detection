@@ -3,7 +3,7 @@ import pickle
 
 import numpy as np
 import pandas as pd
-from taipy.gui import Gui
+from taipy.gui import Gui, State
 
 from utils import explain_pred, generate_transactions, update_threshold
 from charts import *
@@ -44,10 +44,24 @@ amt_options = [
 ]
 
 amt_layout = {
-    # Overlay the two histograms
     "barmode": "overlay",
     "showlegend": False,
 }
+
+confusion_data = pd.DataFrame({"Predicted": [], "Actual": [], "Values": []})
+confusion_layout = None
+confusion_options = {"colorscale": "YlOrRd"}
+
+
+def on_init(state: State) -> None:
+    """
+    Generate the confusion matrix on start
+
+    Args:
+        - state: the state of the app
+    """
+    update_threshold(state)
+
 
 ROOT = """
 <|navbar|>
@@ -74,8 +88,8 @@ CHART_PAGE = """
 """
 
 THRESHOLD_PAGE = """
-<|{threshold}|slider|on_change=update_threshold|lov=0.1;0.2;0.3;0.4;0.5;0.6;0.7;0.8;0.9|>
-<|{confusion_text}|text|>
+<|{threshold}|slider|on_change=update_threshold|lov=0.001;0.005;0.01;0.05;0.1;0.5|>
+<|{confusion_data}|chart|type=heatmap|z=Values|x=Predicted|y=Actual|layout={confusion_layout}|options={confusion_options}|>
 """
 
 pages = {

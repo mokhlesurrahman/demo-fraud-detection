@@ -129,6 +129,7 @@ def generate_transactions(
 def update_threshold(state: State) -> None:
     """
     Change the threshold used to determine if a transaction is fraudulent
+    Generate the confusion matrix
 
     Args:
         - state: the state of the app
@@ -143,4 +144,37 @@ def update_threshold(state: State) -> None:
     y_true = state.transactions["is_fraud"]
     cm = confusion_matrix(y_true, y_pred)
     cm = cm.astype("float") / cm.sum(axis=1)[:, np.newaxis]
-    state.confusion_text = str(cm)
+    tp, tn, fp, fn = cm[1][1], cm[0][0], cm[0][1], cm[1][0]
+    print(f"tp: {tp}, tn: {tn}, fp: {fp}, fn: {fn}")
+
+    data = {
+        "Values": [
+            [fn, tp],
+            [tn, fp],
+        ],
+        "Actual": ["Fraud", "Not Fraud"],
+        "Predicted": ["Not Fraud", "Fraud"],
+    }
+
+    layout = {
+        "annotations": [],
+        "xaxis": {"ticks": "", "side": "top"},
+        "yaxis": {"ticks": "", "ticksuffix": " "},
+    }
+
+    predicted = data["Predicted"]
+    actuals = data["Actual"]
+    for actual, _ in enumerate(actuals):
+        for pred, _ in enumerate(predicted):
+            value = data["Values"][actual][pred]
+            annotation = {
+                "x": predicted[pred],
+                "y": actuals[actual],
+                "text": f"{str(round(value, 3)*100)[:4]}%",
+                "font": {"color": "white" if value < 0.5 else "black"},
+                "showarrow": False,
+            }
+            layout["annotations"].append(annotation)
+
+    state.confusion_data = data
+    state.confusion_layout = layout
