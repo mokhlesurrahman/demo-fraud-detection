@@ -2,7 +2,7 @@
 import datetime as dt
 import numpy as np
 import pandas as pd
-from taipy.gui import State
+from taipy.gui import State, navigate
 import xgboost as xgb
 from shap import Explainer, Explanation
 from sklearn.metrics import confusion_matrix
@@ -69,6 +69,15 @@ def explain_pred(state: State, _: str, payload: dict) -> None:
     else:
         state.fraud_text = "Why is this transaction not fraudulent?"
 
+    first = state.transactions.iloc[idx]["first"]
+    last = state.transactions.iloc[idx]["last"]
+
+    state.specific_transactions = state.transactions[
+        (state.transactions["first"] == first) & (state.transactions["last"] == last)
+    ]
+
+    navigate(state, "Analysis")
+
 
 def generate_transactions(
     df: pd.DataFrame, model: xgb.XGBRegressor, threshold: float
@@ -116,6 +125,12 @@ def generate_transactions(
     raw_results = model.predict(X_test_values)
     results = [str(round(result, 2)) for result in raw_results]
     transactions.insert(0, "fraud_value", results)
+    # Low if under 0.2, Medium if under 0.5, High if over 0.5
+    results = ["Low" if float(result) < 0.2 else "Medium" for result in raw_results]
+    for i, result in enumerate(results):
+        if result == "Medium" and float(raw_results[i]) > 0.5:
+            results[i] = "High"
+    transactions.insert(0, "fraud_confidence", results)
     results = [float(result) > threshold for result in raw_results]
     transactions.insert(0, "fraud", results)
 
@@ -159,6 +174,8 @@ def update_threshold(state: State) -> None:
         "annotations": [],
         "xaxis": {"ticks": "", "side": "top"},
         "yaxis": {"ticks": "", "ticksuffix": " "},
+        "font": {"size": 24},
+        "margin": {"t": 150, "l": 200, "r": 200, "b": 40},
     }
 
     predicted = data["Predicted"]
@@ -170,7 +187,7 @@ def update_threshold(state: State) -> None:
                 "x": predicted[pred],
                 "y": actuals[actual],
                 "text": f"{str(round(value, 3)*100)[:4]}%",
-                "font": {"color": "white" if value < 0.5 else "black"},
+                "font": {"color": "white" if value < 0.5 else "black", "size": 50},
                 "showarrow": False,
             }
             layout["annotations"].append(annotation)

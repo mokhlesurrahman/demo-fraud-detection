@@ -16,7 +16,7 @@ def gen_amt_data(transactions: pd.DataFrame) -> list:
     amt_fraud = transactions[transactions["fraud"]]["amt"]
     amt_no_fraud = transactions[~transactions["fraud"]]["amt"]
     amt_data = [
-        {"Amount ($)": list(amt_no_fraud)[: len(amt_fraud)]},
+        {"Amount ($)": list(amt_no_fraud)},
         {"Amount ($)": list(amt_fraud)},
     ]
     return amt_data
