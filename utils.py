@@ -91,7 +91,8 @@ def generate_transactions(
         - df: the DataFrame containing the transactions
         - model: the model used to predict the fraud
         - threshold: the threshold used to determine if a transaction is fraudulent
-
+        - start_date: the start date of the transactions
+        - end_date: the end date of the transactions
 
     Returns:
         - a DataFrame of transactions with the fraud prediction
@@ -135,7 +136,6 @@ def generate_transactions(
     explainer = Explainer(model)
     sv = explainer(X_test)
     explaination = Explanation(sv, sv.base_values, X_test, feature_names=X_test.columns)
-
     return transactions, explaination
 
 

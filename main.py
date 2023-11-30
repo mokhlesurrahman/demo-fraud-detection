@@ -3,7 +3,7 @@ import pickle
 
 import numpy as np
 import pandas as pd
-from taipy.gui import Gui, Icon, State, navigate
+from taipy.gui import Gui, Icon, State, navigate, notify
 
 from utils import (
     explain_pred,
@@ -96,7 +96,7 @@ def on_init(state: State) -> None:
     Args:
         - state: the state of the app
     """
-    update_threshold(state)
+    # update_threshold(state)
 
 
 def update_transactions(state: State) -> None:
@@ -106,10 +106,12 @@ def update_transactions(state: State) -> None:
     Args:
         - state: the state of the app
     """
+    notify(state, "info", "Predicting fraud...")
     state.transactions, state.explaination = generate_transactions(
         df, model, float(state.threshold), state.start_date, state.end_date
     )
-    state.transactions = state.transactions
+    number_of_fraud = len(state.transactions[state.transactions["fraud"] == True])
+    notify(state, "success", f"Predicted {number_of_fraud} fraudulent transactions")
 
 
 menu_lov = [
