@@ -10,11 +10,7 @@ from sklearn.metrics import confusion_matrix
 column_names = [
     "amt",
     "zip",
-    "lat",
-    "long",
     "city_pop",
-    "merch_lat",
-    "merch_long",
     "age",
     "hour",
     "day",
@@ -76,11 +72,17 @@ def explain_pred(state: State, _: str, payload: dict) -> None:
         (state.transactions["first"] == first) & (state.transactions["last"] == last)
     ]
 
+    state.selected_client = f"{first} {last}"
+
     navigate(state, "Analysis")
 
 
 def generate_transactions(
-    df: pd.DataFrame, model: xgb.XGBRegressor, threshold: float
+    df: pd.DataFrame,
+    model: xgb.XGBRegressor,
+    threshold: float,
+    start_date="2000-01-01",
+    end_date="2030-01-01",
 ) -> [pd.DataFrame, Explanation]:
     """
     Generates a DataFrame of transactions with the fraud prediction
@@ -103,11 +105,7 @@ def generate_transactions(
             "category",
             "amt",
             "zip",
-            "lat",
-            "long",
             "city_pop",
-            "merch_lat",
-            "merch_long",
             "age",
             "hour",
             "day",

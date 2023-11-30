@@ -12,18 +12,21 @@ from utils import (
 )
 from charts import *
 
-DATA_POINTS = 100000
+DATA_POINTS = 10000
 threshold = "0.5"
 threshold_lov = np.arange(0, 1, 0.01)
 confusion_text = "Confusion Matrix"
 fraud_text = "No row selected"
 exp_data = pd.DataFrame({"Feature": [], "Influence": []})
 
-df = pd.read_csv("data/fraud_data.csv")[:DATA_POINTS]
+df = pd.read_csv("data/fraud_data.csv")
 df["merchant"] = df["merchant"].str[6:]
 model = pickle.load(open("model.pkl", "rb"))
 transactions, explaination = generate_transactions(df, model, float(threshold))
 specific_transactions = transactions
+selected_client = "No client selected"
+start_date = "2020-06-21"
+end_date = "2020-06-22"
 
 
 def fraud_style(_: State, index: int, values: list) -> str:
@@ -51,6 +54,8 @@ age_data = gen_age_data(transactions)
 hour_data = gen_hour_data(transactions)
 day_data = gen_day_data(transactions)
 month_data = gen_month_data(transactions)
+
+transactions = transactions[:DATA_POINTS]
 
 
 waterfall_layout = {
@@ -80,6 +85,9 @@ confusion_layout = None
 confusion_options = {"colorscale": "YlOrRd", "displayModeBar": False}
 confusion_config = {"scrollZoom": False, "displayModeBar": False}
 
+transactions = df
+transactions = transactions.drop("Unnamed: 0", axis="columns")
+
 
 def on_init(state: State) -> None:
     """
@@ -89,6 +97,19 @@ def on_init(state: State) -> None:
         - state: the state of the app
     """
     update_threshold(state)
+
+
+def update_transactions(state: State) -> None:
+    """
+    Detects frauds in the selected time period
+
+    Args:
+        - state: the state of the app
+    """
+    state.transactions, state.explaination = generate_transactions(
+        df, model, float(state.threshold), state.start_date, state.end_date
+    )
+    state.transactions = state.transactions
 
 
 menu_lov = [
@@ -108,13 +129,24 @@ def menu_fct(state, var_name, var_value):
 
 
 ROOT = """
-<|toggle|theme|>
 <|menu|label=Menu|lov={menu_lov}|on_action=menu_fct|>
 """
 
 TRANSACTIONS_PAGE = """
-## Select a row to explain the prediction
-<|{transactions}|table|on_action=explain_pred|style=fraud_style|filter|>
+# List of **Transactions**{: .color-primary}
+
+--------------------------------------------------------------------
+
+## Select start and end date for a prediction
+<|layout|columns=1 1 3|
+Start Date: <|{start_date}|date|>
+
+End Date: <|{end_date}|date|>
+|>
+
+<|Detect Frauds|button|on_action=update_transactions|>
+
+<|{transactions}|table|on_action=explain_pred|style=fraud_style|filter|rebuild|>
 """
 
 ANALYSIS_PAGE = """
@@ -125,25 +157,32 @@ ANALYSIS_PAGE = """
 |>
 
 <|
-## Transactions of the same client
+## Transactions of client: **<|{selected_client}|text|raw|>**{: .color-primary}
 <|{specific_transactions}|table|style=fraud_style|filter|on_action=explain_pred|>
 |>
 |>
 """
 
 CHART_PAGE = """
-<br/><br/><br/><br/><br/>
+# Fraud **Distribution**{: .color-primary}
+
+--------------------------------------------------------------------
+
+## Charts of fraud distribution by feature
+
 <|{amt_data}|chart|type=histogram|title=Transaction Amount Distribution|color[2]=red|color[1]=green|name[2]=Fraud|name[1]=Not Fraud|options={amt_options}|layout={amt_layout}|>
 <br/><|{gender_data}|chart|type=bar|x=Fraudulence|y[1]=Male|y[2]=Female|title=Distribution of Fraud by Gender|>
 <br/><|{cat_data}|chart|type=bar|x=Category|y=Difference|orientation=v|title=Difference in Fraudulence by Category (Positive = Fraudulent)|>
-<br/><|{age_data}|chart|type=line|x=Age|y[1]=Not Fraud|y[2]=Fraud|title=Distribution of Fraud by Age|>
 <br/><|{hour_data}|chart|type=bar|x=Hour|y[1]=Not Fraud|y[2]=Fraud|title=Distribution of Fraud by Hour|>
 <br/><|{day_data}|chart|type=bar|x=Day|y[1]=Not Fraud|y[2]=Fraud|title=Distribution of Fraud by Day|>
-<br/><|{month_data}|chart|type=bar|x=Month|y[1]=Not Fraud|y[2]=Fraud|title=Distribution of Fraud by Month|>
 """
 
 THRESHOLD_PAGE = """
-## Select a threshold
+# Threshold **Selection**{: .color-primary}
+
+--------------------------------------------------------------------
+
+## Select a threshold of confidence to filter the transactions
 <|{threshold}|slider|on_change=update_threshold|lov=0.001;0.005;0.01;0.05;0.1;0.5|>
 <|{confusion_data}|chart|type=heatmap|z=Values|x=Predicted|y=Actual|layout={confusion_layout}|options={confusion_options}|plot_config={confusion_config}|height=70vh|>
 """
