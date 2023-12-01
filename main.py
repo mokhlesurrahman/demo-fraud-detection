@@ -12,7 +12,7 @@ from utils import (
 )
 from charts import *
 
-DATA_POINTS = 10000
+DATA_POINTS = 30000
 threshold = "0.5"
 threshold_lov = np.arange(0, 1, 0.01)
 confusion_text = "Confusion Matrix"
@@ -22,7 +22,7 @@ exp_data = pd.DataFrame({"Feature": [], "Influence": []})
 df = pd.read_csv("data/fraud_data.csv")
 df["merchant"] = df["merchant"].str[6:]
 model = pickle.load(open("model.pkl", "rb"))
-transactions, explaination = generate_transactions(df, model, float(threshold))
+transactions, explaination = generate_transactions(None, df, model, float(threshold))
 specific_transactions = transactions
 selected_client = "No client selected"
 start_date = "2020-06-21"
@@ -55,6 +55,7 @@ hour_data = gen_hour_data(transactions)
 day_data = gen_day_data(transactions)
 month_data = gen_month_data(transactions)
 
+df = df[:DATA_POINTS]
 transactions = transactions[:DATA_POINTS]
 
 
@@ -108,8 +109,9 @@ def update_transactions(state: State) -> None:
     """
     notify(state, "info", "Predicting fraud...")
     state.transactions, state.explaination = generate_transactions(
-        df, model, float(state.threshold), state.start_date, state.end_date
+        state, df, model, float(state.threshold), state.start_date, state.end_date
     )
+    state.transactions.reset_index(inplace=True)
     number_of_fraud = len(state.transactions[state.transactions["fraud"] == True])
     notify(state, "success", f"Predicted {number_of_fraud} fraudulent transactions")
 
@@ -143,10 +145,12 @@ TRANSACTIONS_PAGE = """
 <|layout|columns=1 1 3|
 Start Date: <|{start_date}|date|>
 
-End Date: <|{end_date}|date|>
+End Date (excluding): <|{end_date}|date|>
 |>
 
 <|Detect Frauds|button|on_action=update_transactions|>
+
+## Select a transaction to explain the prediction
 
 <|{transactions}|table|on_action=explain_pred|style=fraud_style|filter|rebuild|>
 """
@@ -197,4 +201,4 @@ pages = {
     "Threshold-Selection": THRESHOLD_PAGE,
 }
 
-Gui(pages=pages).run(title="Fraud Detection Demo", dark_mode=False)
+Gui(pages=pages).run(title="Fraud Detection Demo", dark_mode=False, debug=True)

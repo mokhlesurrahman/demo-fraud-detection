@@ -2,7 +2,7 @@
 import datetime as dt
 import numpy as np
 import pandas as pd
-from taipy.gui import State, navigate
+from taipy.gui import State, navigate, notify
 import xgboost as xgb
 from shap import Explainer, Explanation
 from sklearn.metrics import confusion_matrix
@@ -78,16 +78,18 @@ def explain_pred(state: State, _: str, payload: dict) -> None:
 
 
 def generate_transactions(
+    state: State,
     df: pd.DataFrame,
     model: xgb.XGBRegressor,
     threshold: float,
-    start_date="2000-01-01",
+    start_date="2020-06-21",
     end_date="2030-01-01",
 ) -> [pd.DataFrame, Explanation]:
     """
     Generates a DataFrame of transactions with the fraud prediction
 
     Args:
+        - state: the state of the app
         - df: the DataFrame containing the transactions
         - model: the model used to predict the fraud
         - threshold: the threshold used to determine if a transaction is fraudulent
@@ -97,6 +99,20 @@ def generate_transactions(
     Returns:
         - a DataFrame of transactions with the fraud prediction
     """
+    start_date = str(start_date)
+    end_date = str(end_date)
+    start_date_dt = dt.datetime.strptime(start_date, "%Y-%m-%d")
+    end_date_dt = dt.datetime.strptime(end_date, "%Y-%m-%d")
+    # Make sure the dates are separated by at least one day
+    if (end_date_dt - start_date_dt).days < 1:
+        notify(state, "error", "The start date must be before the end date")
+        raise Exception("The start date must be before the end date")
+    # Make sure that start_date is between 2020-06-21 and 2020-06-30
+    if not (dt.datetime(2020, 6, 21) <= start_date_dt <= dt.datetime(2020, 6, 30)):
+        notify(
+            state, "error", "The start date must be between 2020-06-21 and 2020-06-30"
+        )
+        raise Exception("The start date must be between 2020-06-21 and 2020-06-30")
     df["age"] = dt.date.today().year - pd.to_datetime(df["dob"]).dt.year
     df["hour"] = pd.to_datetime(df["trans_date_trans_time"]).dt.hour
     df["day"] = pd.to_datetime(df["trans_date_trans_time"]).dt.dayofweek
@@ -115,12 +131,14 @@ def generate_transactions(
         ]
     ]
     test = pd.get_dummies(test, drop_first=True)
+    test = test[df["trans_date_trans_time"].between(str(start_date), str(end_date))]
 
     X_test = test.drop("is_fraud", axis="columns")
     X_test_values = X_test.values
 
-    transactions = df
-    transactions = transactions.drop("Unnamed: 0", axis="columns")
+    transactions = df[
+        df["trans_date_trans_time"].between(str(start_date), str(end_date))
+    ]
     raw_results = model.predict(X_test_values)
     results = [str(round(result, 2)) for result in raw_results]
     transactions.insert(0, "fraud_value", results)
@@ -136,6 +154,9 @@ def generate_transactions(
     explainer = Explainer(model)
     sv = explainer(X_test)
     explaination = Explanation(sv, sv.base_values, X_test, feature_names=X_test.columns)
+    # Drop Unnamed: 0 column if it exists
+    if "Unnamed: 0" in transactions.columns:
+        transactions = transactions.drop(columns=["Unnamed: 0"])
     return transactions, explaination
 
 
