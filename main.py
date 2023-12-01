@@ -9,6 +9,7 @@ from utils import (
     explain_pred,
     generate_transactions,
     update_threshold,
+    update_table,
 )
 from charts import *
 
@@ -23,10 +24,18 @@ df = pd.read_csv("data/fraud_data.csv")
 df["merchant"] = df["merchant"].str[6:]
 model = pickle.load(open("model.pkl", "rb"))
 transactions, explaination = generate_transactions(None, df, model, float(threshold))
+original_transactions = transactions
+original_explaination = explaination
 specific_transactions = transactions
 selected_client = "No client selected"
 start_date = "2020-06-21"
 end_date = "2020-06-22"
+selected_table = "True Positives"
+true_positives = None
+false_positives = None
+true_negatives = None
+false_negatives = None
+displayed_table = None
 
 
 def fraud_style(_: State, index: int, values: list) -> str:
@@ -40,9 +49,9 @@ def fraud_style(_: State, index: int, values: list) -> str:
     Returns:
         - the style of the row
     """
-    if values.iloc[1] == "High":
+    if values["fraud_confidence"] == "High":
         return "red-row"
-    elif values.iloc[1] == "Medium":
+    elif values["fraud_confidence"] == "Medium":
         return "orange-row"
     return ""
 
@@ -97,7 +106,15 @@ def on_init(state: State) -> None:
     Args:
         - state: the state of the app
     """
-    # update_threshold(state)
+    update_transactions(state)
+    state.displayed_table = state.true_positives
+    (
+        state.true_positives,
+        state.true_negatives,
+        state.false_positives,
+        state.false_negatives,
+    ) = update_threshold(state)
+    update_table(state)
 
 
 def update_transactions(state: State) -> None:
@@ -190,7 +207,12 @@ THRESHOLD_PAGE = """
 
 ## Select a threshold of confidence to filter the transactions
 <|{threshold}|slider|on_change=update_threshold|lov=0.001;0.005;0.01;0.05;0.1;0.5|>
+<|layout|columns=1 2|
 <|{confusion_data}|chart|type=heatmap|z=Values|x=Predicted|y=Actual|layout={confusion_layout}|options={confusion_options}|plot_config={confusion_config}|height=70vh|>
+
+<|{selected_table}|selector|lov=True Positives;False Positives;True Negatives;False Negatives|on_change=update_table|dropdown=True|>
+<|{displayed_table}|table|style=fraud_style|filter|rebuild|>
+|>
 """
 
 pages = {

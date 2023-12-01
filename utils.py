@@ -174,11 +174,31 @@ def update_threshold(state: State) -> None:
     ]
     state.transactions["fraud"] = results
     state.transactions = state.transactions
+    results = [
+        float(result) > threshold
+        for result in state.original_transactions["fraud_value"]
+    ]
+    state.original_transactions["fraud"] = results
+    state.original_transactions = state.original_transactions
     y_pred = results
-    y_true = state.transactions["is_fraud"]
+    y_true = state.original_transactions["is_fraud"]
     cm = confusion_matrix(y_true, y_pred)
     cm = cm.astype("float") / cm.sum(axis=1)[:, np.newaxis]
     tp, tn, fp, fn = cm[1][1], cm[0][0], cm[0][1], cm[1][0]
+
+    dataset = state.original_transactions[:10000]
+    state.true_positives = dataset[
+        (dataset["is_fraud"] == True) & (dataset["fraud"] == True)
+    ]
+    state.true_negatives = dataset[
+        (dataset["is_fraud"] == False) & (dataset["fraud"] == False)
+    ]
+    state.false_positives = dataset[
+        (dataset["is_fraud"] == False) & (dataset["fraud"] == True)
+    ]
+    state.false_negatives = dataset[
+        (dataset["is_fraud"] == True) & (dataset["fraud"] == False)
+    ]
 
     data = {
         "Values": [
@@ -193,8 +213,6 @@ def update_threshold(state: State) -> None:
         "annotations": [],
         "xaxis": {"ticks": "", "side": "top"},
         "yaxis": {"ticks": "", "ticksuffix": " "},
-        "font": {"size": 24},
-        "margin": {"t": 150, "l": 200, "r": 200, "b": 40},
     }
 
     predicted = data["Predicted"]
@@ -213,3 +231,27 @@ def update_threshold(state: State) -> None:
 
     state.confusion_data = data
     state.confusion_layout = layout
+    update_table(state)
+    return (
+        state.true_positives,
+        state.true_negatives,
+        state.false_positives,
+        state.false_negatives,
+    )
+
+
+def update_table(state: State) -> None:
+    """
+    Updates the table of transactions displayed
+
+    Args:
+        - state: the state of the app
+    """
+    if state.selected_table == "True Positives":
+        state.displayed_table = state.true_positives
+    elif state.selected_table == "False Positives":
+        state.displayed_table = state.false_positives
+    elif state.selected_table == "True Negatives":
+        state.displayed_table = state.true_negatives
+    elif state.selected_table == "False Negatives":
+        state.displayed_table = state.false_negatives
