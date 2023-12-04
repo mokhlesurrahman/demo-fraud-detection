@@ -72,6 +72,8 @@ def explain_pred(state: State, _: str, payload: dict) -> None:
         (state.transactions["first"] == first) & (state.transactions["last"] == last)
     ]
 
+    state.selected_transaction = state.transactions.loc[[idx]]
+
     state.selected_client = f"{first} {last}"
 
     navigate(state, "Analysis")
@@ -140,7 +142,7 @@ def generate_transactions(
         df["trans_date_trans_time"].between(str(start_date), str(end_date))
     ]
     raw_results = model.predict(X_test_values)
-    results = [str(round(result, 2)) for result in raw_results]
+    results = [str(min(1, round(result, 2))) for result in raw_results]
     transactions.insert(0, "fraud_value", results)
     # Low if under 0.2, Medium if under 0.5, High if over 0.5
     results = ["Low" if float(result) < 0.2 else "Medium" for result in raw_results]
@@ -224,7 +226,7 @@ def update_threshold(state: State) -> None:
                 "x": predicted[pred],
                 "y": actuals[actual],
                 "text": f"{str(round(value, 3)*100)[:4]}%",
-                "font": {"color": "white" if value < 0.5 else "black", "size": 50},
+                "font": {"color": "white" if value < 0.5 else "black", "size": 30},
                 "showarrow": False,
             }
             layout["annotations"].append(annotation)

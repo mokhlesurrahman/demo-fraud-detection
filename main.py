@@ -36,6 +36,7 @@ false_positives = None
 true_negatives = None
 false_negatives = None
 displayed_table = None
+selected_transaction = None
 
 
 def fraud_style(_: State, index: int, values: list) -> str:
@@ -173,6 +174,10 @@ End Date (excluding): <|{end_date}|date|>
 """
 
 ANALYSIS_PAGE = """
+# Prediction **Analysis**{: .color-primary}
+
+--------------------------------------------------------------------
+
 <|layout|columns=2 3|
 <|card|
 ## <|{fraud_text}|text|>
@@ -180,6 +185,8 @@ ANALYSIS_PAGE = """
 |>
 
 <|
+## Selected Transaction:
+<|{selected_transaction}|table|show_all=True|rebuild||style=fraud_style|>
 ## Transactions of client: **<|{selected_client}|text|raw|>**{: .color-primary}
 <|{specific_transactions}|table|style=fraud_style|filter|on_action=explain_pred|>
 |>
@@ -206,12 +213,14 @@ THRESHOLD_PAGE = """
 --------------------------------------------------------------------
 
 ## Select a threshold of confidence to filter the transactions
-<|{threshold}|slider|on_change=update_threshold|lov=0.001;0.005;0.01;0.05;0.1;0.5|>
+<|{threshold}|slider|on_change=update_threshold|lov=0.05;0.1;0.15;0.2;0.25;0.3;0.35;0.4;0.45;0.5;0.55;0.6;0.65;0.7;0.75;0.8;0.85;0.9;0.95|>
 <|layout|columns=1 2|
 <|{confusion_data}|chart|type=heatmap|z=Values|x=Predicted|y=Actual|layout={confusion_layout}|options={confusion_options}|plot_config={confusion_config}|height=70vh|>
 
+<|card
 <|{selected_table}|selector|lov=True Positives;False Positives;True Negatives;False Negatives|on_change=update_table|dropdown=True|>
 <|{displayed_table}|table|style=fraud_style|filter|rebuild|>
+|>
 |>
 """
 
