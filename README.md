@@ -1,4 +1,4 @@
-# demo-fraud-detection
-Taipy App that detects fraud and explains its analysis on mock transactions data
+# Credit Card Fraud Detection
+Taipy App that analyses credit card transactions and predicts if a transaction is fraudulent or not.
 
-![SHAP Explanation Example](images/not_fraud.png)
+![Threshold Selection Page](images/fraud_threshold.png)
